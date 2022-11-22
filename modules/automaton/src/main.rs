@@ -1,9 +1,11 @@
 use std::{
     cell::{RefCell}, 
-    rc::Rc, vec, borrow::Borrow
+    rc::Rc, vec,
+    collections::LinkedList,
 };
 use queues::*;
 
+const DEBUG_FAILURE_LINKS: bool = false;
 const ALPHABET_SIZE: u16 = 26;
 
 fn index_from_char(character: char) -> u16 {
@@ -31,21 +33,26 @@ impl Node {
         }
     }
 
-    fn set_child(&self, key: char, parent: Rc<Node>, leaf: bool, size: usize) {
-        let index = index_from_char(key) as usize;
+    fn add_child(&self, key: char, parent: Rc<Node>, leaf: bool, size: usize) {
+        match self.get_children(key) {
+            Some(_) => {},
+            None => {
+                let index = index_from_char(key) as usize;
 
-        self.children.borrow_mut()[index] = Some(
-            Rc::new(
-                Self {
-                    key,
-                    parent: Some(parent),
-                    children: RefCell::new(Default::default()),
-                    failure_link: RefCell::new(None),
-                    leaf,
-                    size
-                }
-            )
-        );
+                self.children.borrow_mut()[index] = Some(
+                    Rc::new(
+                        Self {
+                            key,
+                            parent: Some(parent),
+                            children: RefCell::new(Default::default()),
+                            failure_link: RefCell::new(None),
+                            leaf,
+                            size
+                        }
+                    )
+                );
+            }
+        }
     }
 
     fn get_children(&self, key: char) -> Option<Rc<Node>> {
@@ -55,8 +62,6 @@ impl Node {
     }
 
     fn contains_child(&self, key: char) -> bool {
-        let index = index_from_char(key);
-
         match self.get_children(key) {
             Some(_) => true,
             None => false
@@ -92,7 +97,7 @@ impl Automaton {
         let mut current_node = self.root.clone();
 
         for (i, c) in word.chars().enumerate() {
-            current_node.set_child(c, 
+            current_node.add_child(c, 
                 current_node.clone(), 
                 if i == (word_len - 1) { true } else { false }, 
                 i + 1);
@@ -180,27 +185,35 @@ impl Automaton {
             self.calcul_suffix_link(&mut current_node);
             
 
-            let failure_link = current_node.failure_link.borrow().as_ref().unwrap().clone();
-
-            println!("{} {} -> {} {}", current_node.key, current_node.size, failure_link.key, failure_link.size);
+            if DEBUG_FAILURE_LINKS {
+                let failure_link = current_node.failure_link.borrow().as_ref().unwrap().clone();
+                println!("{} {} -> {} {}", current_node.key, current_node.size, failure_link.key, failure_link.size);
+            }
 
             current_node.get_linked_children().iter().for_each(|val| { let _ = queue.add(val.clone()); });
+        }
+    }
+
+    fn print_nodes_dfs(&self) {
+        let mut current_node = self.root.clone();
+        let mut stack: LinkedList<Rc<Node>> = LinkedList::new();
+
+        current_node.get_linked_children().iter().for_each(|val| { let _ = stack.push_back(val.clone()); });
+
+        while !stack.is_empty() {
+            let node = stack.pop_back().unwrap();
+
+            println!("{} {}", node.key, node.size);
+            node.get_linked_children().iter().for_each(|val| { let _ = stack.push_back(val.clone()); });
         }
     }
 }
 
 fn main() {
-    let var1 = Rc::new(vec![1, 2, 3, 4]);
-    let var2 = var1.clone();
-
-    println!("var1: {:?}", var1);
-    println!("var2: {:?}", var2);
-    println!("{}", Rc::ptr_eq(&var1, &var2));
-
     let mut automaton: Automaton = Automaton::new();
     let pattern: String = String::from("pat");
 
-    automaton.add_several_patterns(&vec![String::from("acc"), String::from("atc"), String::from("cat"), String::from("gcg")]);
+    automaton.add_several_patterns(&vec![String::from("atc"), String::from("acc"), String::from("cat"), String::from("gcg")]);
     automaton.construct_failure_links();
 
     println!("The pattern {} is present: {}", &pattern, automaton.is_pattern_present(&pattern));
