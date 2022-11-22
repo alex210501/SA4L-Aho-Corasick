@@ -1,7 +1,8 @@
 use std::{
     cell::{RefCell}, 
-    rc::Rc
+    rc::Rc, vec, borrow::Borrow
 };
+use queues::*;
 
 const ALPHABET_SIZE: u16 = 26;
 
@@ -13,8 +14,9 @@ struct Node {
     key: char,
     parent: Option<Rc<Node>>,
     children: RefCell<[Option<Rc<Node>>; ALPHABET_SIZE as usize]>,
-    failure_link: Option<Rc<Node>>,
+    failure_link: RefCell<Option<Rc<Node>>>,
     leaf: bool,
+    size: usize,
 }
 
 impl Node {
@@ -23,12 +25,13 @@ impl Node {
             key: ' ',
             parent: None,
             children: RefCell::new(Default::default()),
-            failure_link: None,
-            leaf: false 
+            failure_link: RefCell::new(None),
+            leaf: false,
+            size: 0,
         }
     }
 
-    fn set_child(&self, key: char, parent: Rc<Node>, leaf: bool) {
+    fn set_child(&self, key: char, parent: Rc<Node>, leaf: bool, size: usize) {
         let index = index_from_char(key) as usize;
 
         self.children.borrow_mut()[index] = Some(
@@ -37,8 +40,9 @@ impl Node {
                     key,
                     parent: Some(parent),
                     children: RefCell::new(Default::default()),
-                    failure_link: None,
-                    leaf
+                    failure_link: RefCell::new(None),
+                    leaf,
+                    size
                 }
             )
         );
@@ -48,6 +52,29 @@ impl Node {
         let index = index_from_char(key) as usize;
 
         self.children.borrow()[index].clone()
+    }
+
+    fn contains_child(&self, key: char) -> bool {
+        let index = index_from_char(key);
+
+        match self.get_children(key) {
+            Some(_) => true,
+            None => false
+        }
+    }
+
+    fn get_linked_children(&self) -> Vec<Rc<Node>> {
+        self.children
+            .borrow().iter()
+            .filter_map(|child| {
+                if child.is_some() {
+                    Some(child.as_ref().unwrap())
+                } else {
+                    None
+                }
+            })
+            .map(|rc| rc.clone())
+            .collect::<Vec<Rc<Node>>>()
     }
 }
 
@@ -65,7 +92,10 @@ impl Automaton {
         let mut current_node = self.root.clone();
 
         for (i, c) in word.chars().enumerate() {
-            current_node.set_child(c, current_node.clone(), if i == (word_len - 1) { true } else { false });
+            current_node.set_child(c, 
+                current_node.clone(), 
+                if i == (word_len - 1) { true } else { false }, 
+                i + 1);
 
             current_node = match current_node.get_children(c) {
                 Some(node) => node,
@@ -97,13 +127,81 @@ impl Automaton {
 
         false
     }
+
+    fn calcul_suffix_link(&mut self, node: &mut Rc<Node>) {
+        // If the node is the root, the failure link its itself
+        if node.parent.is_none() && Rc::ptr_eq(&self.root, node) {
+            node.failure_link.replace(Some(self.root.clone()));
+            return;
+        }
+
+        // If the parent is root, define the failure link as root
+        if Rc::ptr_eq(&node.parent.as_ref().unwrap().clone(), &self.root) {
+            node.failure_link.replace(Some(self.root.clone()));
+            return;
+        }
+
+        // Return if it is a direct child of the root, the failure link is the root
+        if Rc::ptr_eq(&self.root, &(node.parent.as_ref().unwrap())) {
+            return;
+        }
+
+        // Search failure link for each child
+        let mut tmp_node = match node.parent.as_ref().unwrap().failure_link.borrow_mut().as_ref() {
+            Some(link) => link.clone(),
+            None => panic!("No failure link defined !")
+        };
+
+        while !Rc::ptr_eq(&self.root, &tmp_node) && !tmp_node.contains_child(node.key) {
+            let failure_link = match tmp_node.failure_link.borrow_mut().as_ref() {
+                Some(link) => link.clone(),
+                None => panic!("No failure link defined !")
+            };
+
+            tmp_node = failure_link;
+        }
+
+        match tmp_node.get_children(node.key) {
+            Some(c) => node.failure_link.replace(Some(c.clone())),
+            None => node.failure_link.replace(Some(self.root.clone()))
+        };
+    }
+
+    fn construct_failure_links(&mut self) {
+        let mut current_node = self.root.clone();
+        let mut queue: Queue<Rc<Node>> = Queue::new();
+
+        // Add every root children in the queue
+        current_node.get_linked_children().iter().for_each(|val| { let _ = queue.add(val.clone()); });
+
+        // Loop on every node
+        while queue.size() > 0 {
+            current_node = queue.remove().unwrap();
+            self.calcul_suffix_link(&mut current_node);
+            
+
+            let failure_link = current_node.failure_link.borrow().as_ref().unwrap().clone();
+
+            println!("{} {} -> {} {}", current_node.key, current_node.size, failure_link.key, failure_link.size);
+
+            current_node.get_linked_children().iter().for_each(|val| { let _ = queue.add(val.clone()); });
+        }
+    }
 }
 
 fn main() {
+    let var1 = Rc::new(vec![1, 2, 3, 4]);
+    let var2 = var1.clone();
+
+    println!("var1: {:?}", var1);
+    println!("var2: {:?}", var2);
+    println!("{}", Rc::ptr_eq(&var1, &var2));
+
     let mut automaton: Automaton = Automaton::new();
     let pattern: String = String::from("pat");
 
-    automaton.add_several_patterns(&vec![String::from("yop"), String::from("pattern")]);
+    automaton.add_several_patterns(&vec![String::from("acc"), String::from("atc"), String::from("cat"), String::from("gcg")]);
+    automaton.construct_failure_links();
 
     println!("The pattern {} is present: {}", &pattern, automaton.is_pattern_present(&pattern));
 }
