@@ -6,6 +6,7 @@ use std::{
 use queues::*;
 
 const DEBUG_FAILURE_LINKS: bool = false;
+const DEBUG_DICTIONARY_LINKS: bool = false;
 const ALPHABET_SIZE: u16 = 26;
 
 fn index_from_char(character: char) -> u16 {
@@ -17,6 +18,7 @@ struct Node {
     parent: Option<Rc<Node>>,
     children: RefCell<[Option<Rc<Node>>; ALPHABET_SIZE as usize]>,
     failure_link: RefCell<Option<Rc<Node>>>,
+    dictionary_link: RefCell<Option<Rc<Node>>>,
     leaf: bool,
     size: usize,
 }
@@ -28,13 +30,14 @@ impl Node {
             parent: None,
             children: RefCell::new(Default::default()),
             failure_link: RefCell::new(None),
+            dictionary_link: RefCell::new(None),
             leaf: false,
             size: 0,
         }
     }
 
     fn add_child(&self, key: char, parent: Rc<Node>, leaf: bool, size: usize) {
-        match self.get_children(key) {
+        match self.get_child(key) {
             Some(_) => {},
             None => {
                 let index = index_from_char(key) as usize;
@@ -46,6 +49,7 @@ impl Node {
                             parent: Some(parent),
                             children: RefCell::new(Default::default()),
                             failure_link: RefCell::new(None),
+                            dictionary_link: RefCell::new(None),
                             leaf,
                             size
                         }
@@ -55,14 +59,14 @@ impl Node {
         }
     }
 
-    fn get_children(&self, key: char) -> Option<Rc<Node>> {
+    fn get_child(&self, key: char) -> Option<Rc<Node>> {
         let index = index_from_char(key) as usize;
 
         self.children.borrow()[index].clone()
     }
 
     fn contains_child(&self, key: char) -> bool {
-        match self.get_children(key) {
+        match self.get_child(key) {
             Some(_) => true,
             None => false
         }
@@ -102,7 +106,7 @@ impl Automaton {
                 if i == (word_len - 1) { true } else { false }, 
                 i + 1);
 
-            current_node = match current_node.get_children(c) {
+            current_node = match current_node.get_child(c) {
                 Some(node) => node,
                 None => panic!("Child does not exists !"),
             }
@@ -118,7 +122,7 @@ impl Automaton {
         let mut current_node = self.root.clone();
 
         for (i, c) in word.chars().enumerate() {
-            match current_node.get_children(c) {
+            match current_node.get_child(c) {
                 Some(child) => {
                     if child.leaf && (i == word_len - 1) {
                         return true;
@@ -166,7 +170,7 @@ impl Automaton {
             tmp_node = failure_link;
         }
 
-        match tmp_node.get_children(node.key) {
+        match tmp_node.get_child(node.key) {
             Some(c) => node.failure_link.replace(Some(c.clone())),
             None => node.failure_link.replace(Some(self.root.clone()))
         };
@@ -194,16 +198,66 @@ impl Automaton {
         }
     }
 
-    fn print_nodes_dfs(&self) {
+    fn calcul_dictionary_links(&self, node: &mut Rc<Node>) {
+        if node.dictionary_link.borrow().is_some() || 
+            Rc::ptr_eq(&self.root, &node) || 
+            Rc::ptr_eq(&self.root, &node.parent.as_ref().unwrap()){
+            return;
+        }
+
+        // Check the failure link for the dictionary link
+        match node.failure_link.borrow_mut().as_mut() {
+            Some(link) => {
+                if Rc::ptr_eq(&self.root, link) {
+                    node.dictionary_link.replace(None);
+                } else if link.leaf {
+                    node.dictionary_link.replace(Some(link.clone()));
+                } else {
+                    node.dictionary_link.replace(match link.dictionary_link.borrow().as_ref() {
+                        Some(dict_link) => Some(dict_link.clone()),
+                        None => {
+                            self.calcul_dictionary_links(&mut link.clone());
+                            link.dictionary_link.borrow().as_ref().cloned()
+                        },
+                    });
+                }
+            },
+            None => panic!("No failure link defined for {} {}", node.key, node.size),
+        }
+    }
+
+    fn construct_dictionary_links(&mut self) {
         let mut current_node = self.root.clone();
+        let mut queue: Queue<Rc<Node>> = Queue::new();
+
+        // Add every root children in the queue
+        current_node.get_linked_children().iter().for_each(|val| { let _ = queue.add(val.clone()); });
+
+        // Loop on every node
+        while queue.size() > 0 {
+            current_node = queue.remove().unwrap();
+            self.calcul_dictionary_links(&mut current_node);
+
+            if DEBUG_DICTIONARY_LINKS {
+                match current_node.dictionary_link.borrow().as_ref() {
+                    Some(link) => println!("{} {} -> {} {}", current_node.key, current_node.size, link.key, link.size),
+                    None => {},
+                };
+            }
+
+            current_node.get_linked_children().iter().for_each(|val| { let _ = queue.add(val.clone()); });
+        }
+    }
+
+    fn print_nodes_dfs(&self) {
         let mut stack: LinkedList<Rc<Node>> = LinkedList::new();
 
-        current_node.get_linked_children().iter().for_each(|val| { let _ = stack.push_back(val.clone()); });
+        self.root.get_linked_children().iter().for_each(|val| { let _ = stack.push_back(val.clone()); });
 
         while !stack.is_empty() {
             let node = stack.pop_back().unwrap();
 
-            println!("{} {}", node.key, node.size);
+            println!("{} {}, (leaf: {})", node.key, node.size, node.leaf);
             node.get_linked_children().iter().for_each(|val| { let _ = stack.push_back(val.clone()); });
         }
     }
@@ -213,8 +267,10 @@ fn main() {
     let mut automaton: Automaton = Automaton::new();
     let pattern: String = String::from("pat");
 
-    automaton.add_several_patterns(&vec![String::from("atc"), String::from("acc"), String::from("cat"), String::from("gcg")]);
+    automaton.add_several_patterns(&vec![String::from("a"), String::from("ag"), String::from("c"), String::from("caa"), String::from("gag"), String::from("gc"), String::from("gca")]);
+    automaton.print_nodes_dfs();
     automaton.construct_failure_links();
+    automaton.construct_dictionary_links();
 
     println!("The pattern {} is present: {}", &pattern, automaton.is_pattern_present(&pattern));
 }
