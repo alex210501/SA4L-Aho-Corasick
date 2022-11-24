@@ -6,13 +6,10 @@
 use aho_corasick::aho_corasick::AhoCorasick;
 
 fn main() {
-    let patterns: Vec<String> = vec![
-        String::from("acc"),
-        String::from("atc"),
-        String::from("cat"),
-        String::from("gcg"),
+    let patterns: Vec<&str> = vec![
+        "acc", "atc", "cat", "gcg",
     ];
-    let text = String::from("gcatcg");
+    let text = "gcatcg";
 
     let mut ac = AhoCorasick::new(&patterns);
     ac.search_text(&text);

@@ -12,15 +12,15 @@ pub struct MatchResult {
     pub end: u16,
 }
 
-pub struct AhoCorasick {
+pub struct AhoCorasick<'a> {
     pub automaton: Automaton,
-    pub patterns: Vec<String>,
+    pub patterns: Vec<&'a str>,
     pub result: Vec<MatchResult>,
     node: Rc<Node>
 }
 
-impl AhoCorasick {
-    pub fn new(patterns: &Vec<String>) -> Self {
+impl<'a> AhoCorasick<'a> {
+    pub fn new(patterns: &Vec<&'a str>) -> Self {
         Self {
             automaton: Automaton::from_patterns(patterns),
             patterns: patterns.clone(),
@@ -97,7 +97,7 @@ impl AhoCorasick {
         };
     }
 
-    pub fn search_text(&mut self, text: &String) -> Vec<MatchResult> {
+    pub fn search_text(&mut self, text: &str) -> Vec<MatchResult> {
         self.node = self.automaton.root.clone();
 
         for (i, c) in text.chars().enumerate() {

@@ -104,7 +104,7 @@ impl Automaton {
         Self { root: Rc::new(Node::new()) }
     }
 
-    pub fn from_patterns(patterns: &Vec<String>) -> Self{
+    pub fn from_patterns(patterns: &Vec<&str>) -> Self{
         let mut automaton: Automaton = Automaton::new();
 
         automaton.add_several_patterns(patterns);
@@ -114,7 +114,7 @@ impl Automaton {
         automaton
     }
 
-    pub fn add_pattern(&mut self, word: &String) {
+    pub fn add_pattern(&mut self, word: &str) {
         let word_len = word.len();
         let mut current_node = self.root.clone();
 
@@ -131,7 +131,7 @@ impl Automaton {
         }
     }
     
-    pub fn add_several_patterns(&mut self, words: &Vec<String>) {
+    pub fn add_several_patterns(&mut self, words: &Vec<&str>) {
         words.iter().for_each(|word| self.add_pattern(word));
     }
 
