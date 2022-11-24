@@ -5,9 +5,17 @@ use crate::automaton::{
     Node,
 };
 
+#[derive(Debug, Clone)]
+pub struct MatchResult {
+    pub pattern: u16,
+    pub start: u16,
+    pub end: u16,
+}
+
 pub struct AhoCorasick {
     pub automaton: Automaton,
     pub patterns: Vec<String>,
+    pub result: Vec<MatchResult>,
     node: Rc<Node>
 }
 
@@ -16,8 +24,43 @@ impl AhoCorasick {
         Self {
             automaton: Automaton::from_patterns(patterns),
             patterns: patterns.clone(),
+            result: Vec::new(),
             node: Rc::new(Node::new()),
         }
+    }
+
+    fn add_result_from_last_pattern(&mut self, last_node: Rc<Node>, end_index: u16) {
+        let mut pattern: String = String::new();
+        let mut current_node = last_node.clone();
+
+        loop {
+            if Rc::ptr_eq(&current_node, &self.automaton.root) {
+                break;
+            }
+
+            pattern.push(current_node.key);
+            current_node = match current_node.parent.clone() {
+                Some(parent) => parent.clone(),
+                None => panic!("No parent defined for a non root node"),
+            }
+        }
+
+        // Reverse the string because we look the tree in reverse order
+        pattern = pattern.chars().rev().collect();
+        match self.patterns.iter().position(|string| *string == pattern) {
+            Some(pattern_number) => {
+                self.result.push(MatchResult {
+                    pattern: pattern_number as u16,
+                    start: end_index + 1 - (last_node.size as u16),
+                    end: end_index,
+                });
+            },
+            None => panic!("No pattern {} found !", pattern),
+        }
+
+        
+
+        println!("Pattern matched: {}", pattern);
     }
 
     fn match_pattern(&mut self, index: usize, key: char) {
@@ -29,13 +72,13 @@ impl AhoCorasick {
         match self.node.get_child(key) {
             Some(child) => {
                 if child.leaf {
-                    println!("Pattern match at {} {}", (index + 1) as u16 - child.size as u16, index);
+                    self.add_result_from_last_pattern(child.clone(), index as u16);
                 }
 
                 match child.get_dictionary_link() {
                     Some(dict_link) => {
                         if dict_link.leaf {
-                            println!("Pattern match at {} {}", (index + 1) as u16 - dict_link.size as u16, index);
+                            self.add_result_from_last_pattern(dict_link.clone(), index as u16);
                         }
                     },
                     None => {}
@@ -56,11 +99,13 @@ impl AhoCorasick {
         };
     }
 
-    pub fn search_text(&mut self, text: &String) {
+    pub fn search_text(&mut self, text: &String) -> Vec<MatchResult> {
         self.node = self.automaton.root.clone();
 
         for (i, c) in text.chars().enumerate() {
             self.match_pattern(i, c);
         }
+
+        self.result.clone()
     }
 }
