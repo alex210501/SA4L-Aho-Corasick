@@ -1,5 +1,5 @@
 /*
-    Example based on the value of the YouTube video:
+    Example based on the the YouTube video:
     https://youtu.be/O7_w001f58c
 */
 
