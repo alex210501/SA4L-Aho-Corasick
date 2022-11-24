@@ -58,8 +58,6 @@ impl AhoCorasick {
             None => panic!("No pattern {} found !", pattern),
         }
 
-        
-
         println!("Pattern matched: {}", pattern);
     }
 

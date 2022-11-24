@@ -5,20 +5,20 @@ fn index_from_char(character: char) -> u16 {
 }
 
 #[derive(Debug)]
-struct TrieNode{
+pub struct TrieNode{
     children: Box<[Option<TrieNode>; ALPHABET_SIZE as usize]>,
     is_last_character: bool,
 }
 
 impl TrieNode {
-    fn new() -> TrieNode{
+    pub fn new() -> TrieNode{
         TrieNode { 
             children: Default::default(), 
             is_last_character: false 
         }
     }
 
-    fn insert(first_node: &mut TrieNode, word: &String) {
+    pub fn insert(first_node: &mut TrieNode, word: &String) {
         let word_len = word.len();
         let mut current_node = first_node;
 
@@ -36,13 +36,13 @@ impl TrieNode {
         }
     }
 
-    fn insert_severals(first_node: &mut TrieNode, words: &Vec<String>) {
+    pub fn insert_severals(first_node: &mut TrieNode, words: &Vec<String>) {
         words.iter().for_each(|word| {
             Self::insert(first_node, word);
         });
     }
 
-    fn search(first_node: &TrieNode, word: &String) -> bool {
+    pub fn search(first_node: &TrieNode, word: &String) -> bool {
         let mut index: usize = 0;
         let mut current_node = first_node;
 
@@ -64,11 +64,4 @@ impl TrieNode {
         
         index == word.len() - 1
     }
-}
-
-fn main() {
-    let mut first_node: TrieNode = TrieNode::new();
-
-    TrieNode::insert_severals(&mut first_node, &vec![String::from("yop"), String::from("burger")]);
-    println!("{}", TrieNode::search(&first_node, &String::from("urger")));
 }
