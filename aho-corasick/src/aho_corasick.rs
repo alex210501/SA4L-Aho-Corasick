@@ -57,8 +57,6 @@ impl<'a> AhoCorasick<'a> {
             },
             None => panic!("No pattern {} found !", pattern),
         }
-
-        println!("Pattern matched: {}", pattern);
     }
 
     fn match_pattern(&mut self, index: usize, key: char) {
