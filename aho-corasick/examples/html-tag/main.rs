@@ -1,11 +1,7 @@
-use std::env;
-use std::ops::Deref;
-use std::{fs, io::Write};
+use std::{env, fs, io::Write};
 use std::fs::File;
 
-use aho_corasick::{
-    aho_corasick::{AhoCorasick, MatchResult},
-};
+use aho_corasick::aho_corasick::AhoCorasick;
 
 const OPEN_BODY: &str = "<body style=\"width: 70%;white-space: initial;word-wrap: break-word;\">";
 const CLOSE_BODY: &str = "</body>";
