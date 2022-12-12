@@ -1,0 +1,2 @@
+trie : https://www.geeksforgeeks.org/introduction-to-trie-data-structure-and-algorithm-tutorials/
+building trie : https://www.geeksforgeeks.org/trie-insert-and-search/
