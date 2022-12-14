@@ -52,7 +52,10 @@ class Trie:
 
                 pCrawl.children[index] = self.getNode()
 
+            # Referencing the parent of the new node
             pCrawl.children[index].parent = pCrawl
+            pCrawl.children[index].parent.isEndOfWord = False
+            # Going to the new node
             pCrawl = pCrawl.children[index]
 
  
@@ -66,13 +69,36 @@ class Trie:
         # in trie, else false
         pCrawl = self.root
         length = len(key)
+        letters_present = []
         for level in range(length):
             index = self._charToIndex(key[level])
-            if not pCrawl.children[index]:
-                level += 1
+            # If the letter isn't present in the trie (not contained in the root's children)
+            if not pCrawl.children[index] and pCrawl is self.root:
+                pass
+
+            # If the letter isn't present in the actual branch
+            elif not pCrawl.children[index]:
+                pCrawl = pCrawl.failure_link
+                # If the letter is present in the failure link's children
+                if pCrawl.children[index]:
+                    letters_present.append(key[level])
+                    """
+                    if pCrawl.children[index].isEndOfWord:
+                        print("this is letters presents first : {}".format(letters_present)) 
+                        return pCrawl.children[index].isEndOfWord
+                    """
             else:
                 pCrawl = pCrawl.children[index]
- 
+                letters_present.append(key[level])
+                print("Is end of word check for this letter {} : {}".format(key[level], pCrawl.isEndOfWord == True))
+                """
+                if pCrawl.isEndOfWord:
+                    print("this is letters presents second : {}".format(letters_present)) 
+                    return pCrawl.isEndOfWord
+                """
+
+                
+        print("this is letters presents third : {}".format(letters_present)) 
         return pCrawl.isEndOfWord
     
     def failure_links(self):
@@ -93,14 +119,16 @@ class Trie:
             length = len(node.children)
 
             for index in range(length):
+
                 if node.children[index] is not None:
+
                     if node.children[index] not in visited:
-                        print("THIS IS QUEUE : {}".format(queue))
+
                         visited.append(node.children[index])
                         queue.append(node.children[index])
                         # If my actual node is directly related to the root
                         # his failure link will be root
-                        if node is self.root:
+                        if node is self.root:         
                             node.children[index].failure_link = self.root
 
                         # If my actual node isn't directly related to the root
@@ -147,14 +175,16 @@ def main():
     t.failure_links()
  
     # Search for different keys
+
+    print("{} ---- {}".format("anrlphabtheirmot",output[t.search("anrlphabtheirmot")]))
     """
-    print("{} ---- {}".format("karatekamachinethus",output[t.search("karatekamachinethus")]))
     print("{} ---- {}".format("these",output[t.search("these")]))
     print("{} ---- {}".format("their",output[t.search("their")]))
     print("{} ---- {}".format("thaw",output[t.search("thaw")]))
     print("{} ---- {}".format("that",output[t.search("that")]))
     print("{} ---- {}".format("zionyxay",output[t.search("zionyxay")]))
     """
+
  
 if __name__ == '__main__':
     main()

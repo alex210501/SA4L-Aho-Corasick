@@ -1,5 +1,6 @@
 trie : https://www.geeksforgeeks.org/introduction-to-trie-data-structure-and-algorithm-tutorials/
 building trie : https://www.geeksforgeeks.org/trie-insert-and-search/
+If a node has no child nodes, it's known as a leaf node.
 
  def failure_links(self):
      # Function that will go through the trie 
