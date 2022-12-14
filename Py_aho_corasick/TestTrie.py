@@ -5,6 +5,12 @@ class TrieNode:
         # [None, None, None, None, None, ...] to the index 25
         # where 26 represents the number of letters in the alphabet
         self.children = [None for _ in range(26)]
+
+        self.failure_link = None
+
+        self.dictionnary_link = None
+
+        self.parent = None
  
         # isEndOfWord is True if node represent the end of the word
         self.isEndOfWord = False
@@ -14,6 +20,7 @@ class Trie:
     # Trie data structure class
     def __init__(self):
         self.root = self.getNode()
+        self.root.failure_link = self.root
  
     def getNode(self):
      
@@ -36,13 +43,18 @@ class Trie:
         # just marks leaf node
         pCrawl = self.root
         length = len(key)
+
         for level in range(length):
             index = self._charToIndex(key[level])
  
             # if current character is not present
             if not pCrawl.children[index]:
+
                 pCrawl.children[index] = self.getNode()
+
+            pCrawl.children[index].parent = pCrawl
             pCrawl = pCrawl.children[index]
+
  
         # mark last node as leaf
         pCrawl.isEndOfWord = True
@@ -62,6 +74,55 @@ class Trie:
                 pCrawl = pCrawl.children[index]
  
         return pCrawl.isEndOfWord
+    
+    def failure_links(self):
+        # Function that will go through the trie 
+        # and that will build the failure links and 
+        # the dictionnary links
+
+        visited = []
+        queue = []
+
+        pCrawl = self.root
+        visited.append(pCrawl)
+        queue.append(pCrawl)
+
+        while queue:
+
+            node = queue.pop(0)
+            length = len(node.children)
+
+            for index in range(length):
+                if node.children[index] is not None:
+                    if node.children[index] not in visited:
+                        print("THIS IS QUEUE : {}".format(queue))
+                        visited.append(node.children[index])
+                        queue.append(node.children[index])
+                        # If my actual node is directly related to the root
+                        # his failure link will be root
+                        if node is self.root:
+                            node.children[index].failure_link = self.root
+
+                        # If my actual node isn't directly related to the root
+                        # go check his parent's failure link
+                        # if this node (the node of the failure link)
+                        # contains a chil that is the same as my actual node
+                        # my actual node's failure link will be this node
+                        else:
+                            try:
+                                # pCrawl is the failure link
+                                pCrawl = node.failure_link
+                                if pCrawl.children[index]:
+                                    node.children[index].failure_link = pCrawl.children[index]
+                                else:
+                                    if self.root.children[index]:
+                                        node.children[index].failure_link = self.root.children[index]
+                                    else:
+                                        node.children[index].failure_link = self.root
+                            except:
+                                return False
+        print("The failure links have been built")
+        return True
  
 # driver function
 def main():
@@ -81,14 +142,19 @@ def main():
     for key in keys:
         t.insert(key)
     print("this is t : {}".format(t))
+
+    # Construct the failure links in the trie
+    t.failure_links()
  
     # Search for different keys
+    """
     print("{} ---- {}".format("karatekamachinethus",output[t.search("karatekamachinethus")]))
     print("{} ---- {}".format("these",output[t.search("these")]))
     print("{} ---- {}".format("their",output[t.search("their")]))
     print("{} ---- {}".format("thaw",output[t.search("thaw")]))
     print("{} ---- {}".format("that",output[t.search("that")]))
     print("{} ---- {}".format("zionyxay",output[t.search("zionyxay")]))
+    """
  
 if __name__ == '__main__':
     main()
