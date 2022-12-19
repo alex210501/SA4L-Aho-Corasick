@@ -32,6 +32,8 @@ fn main() {
             output.push_str(CLOSE_TAG);
             last_pattern = match_result.end as usize + 1;
         }
+
+        output.push_str(&contents[last_pattern..]);
     }
     output.push_str(CLOSE_BODY);
 
