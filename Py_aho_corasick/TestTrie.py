@@ -78,24 +78,25 @@ class Trie:
 
             # If the letter isn't present in the actual branch
             elif not pCrawl.children[index]:
+                letters_present.clear()
                 pCrawl = pCrawl.failure_link
                 # If the letter is present in the failure link's children
                 if pCrawl.children[index]:
                     letters_present.append(key[level])
-                    """
+
                     if pCrawl.children[index].isEndOfWord:
                         print("this is letters presents first : {}".format(letters_present)) 
                         return pCrawl.children[index].isEndOfWord
-                    """
+
             else:
                 pCrawl = pCrawl.children[index]
                 letters_present.append(key[level])
+
                 print("Is end of word check for this letter {} : {}".format(key[level], pCrawl.isEndOfWord == True))
-                """
+
                 if pCrawl.isEndOfWord:
                     print("this is letters presents second : {}".format(letters_present)) 
                     return pCrawl.isEndOfWord
-                """
 
                 
         print("this is letters presents third : {}".format(letters_present)) 
@@ -175,7 +176,6 @@ def main():
     t.failure_links()
  
     # Search for different keys
-
     print("{} ---- {}".format("anrlphabtheirmot",output[t.search("anrlphabtheirmot")]))
     """
     print("{} ---- {}".format("these",output[t.search("these")]))
