@@ -1,3 +1,7 @@
+# This code was based on the work of Atul Kumar (www.facebook.com/atul.kr.007)
+# It was improved by Hugo Dubois in a learning perspective and in a school setting
+
+
 class TrieNode:
      
     # Trie node class
@@ -11,6 +15,9 @@ class TrieNode:
         self.dictionnary_link = None
 
         self.parent = None
+
+        # word_node is True if node represent the end of a word but it's not a leaf
+        self.word_node = False
  
         # isEndOfWord is True if node represent the end of the word
         self.isEndOfWord = False
@@ -57,6 +64,8 @@ class Trie:
             pCrawl.children[index].parent.isEndOfWord = False
             # Going to the new node
             pCrawl = pCrawl.children[index]
+            if level == (length - 1):
+                pCrawl.word_node = True
 
  
         # mark last node as leaf
@@ -70,8 +79,10 @@ class Trie:
         pCrawl = self.root
         length = len(key)
         letters_present = []
+        dico_letter_present = []
         for level in range(length):
             index = self._charToIndex(key[level])
+
             # If the letter isn't present in the trie (not contained in the root's children)
             if not pCrawl.children[index] and pCrawl is self.root:
                 pass
@@ -80,26 +91,8 @@ class Trie:
             elif not pCrawl.children[index]:
                 letters_present.clear()
                 pCrawl = pCrawl.failure_link
-                # If the letter is present in the failure link's children
-                if pCrawl.children[index]:
-                    letters_present.append(key[level])
 
-                    if pCrawl.children[index].isEndOfWord:
-                        print("this is letters presents first : {}".format(letters_present)) 
-                        return pCrawl.children[index].isEndOfWord
 
-            else:
-                pCrawl = pCrawl.children[index]
-                letters_present.append(key[level])
-
-                print("Is end of word check for this letter {} : {}".format(key[level], pCrawl.isEndOfWord == True))
-
-                if pCrawl.isEndOfWord:
-                    print("this is letters presents second : {}".format(letters_present)) 
-                    return pCrawl.isEndOfWord
-
-                
-        print("this is letters presents third : {}".format(letters_present)) 
         return pCrawl.isEndOfWord
     
     def failure_links(self):
@@ -135,7 +128,7 @@ class Trie:
                         # If my actual node isn't directly related to the root
                         # go check his parent's failure link
                         # if this node (the node of the failure link)
-                        # contains a chil that is the same as my actual node
+                        # has a child that has the same character as my actual node
                         # my actual node's failure link will be this node
                         else:
                             try:
@@ -152,13 +145,59 @@ class Trie:
                                 return False
         print("The failure links have been built")
         return True
+
+    def dictionnary_links(self):
+
+        pCrawl = self.root
+
+        visited = []
+        queue = []
+
+        visited.append(pCrawl)
+        queue.append(pCrawl)
+
+        while queue:
+
+            node = queue.pop(0)
+            length = len(node.children)
+
+            for index in range(length):
+
+                child = node.children[index]
+
+                if node.children[index] is not None:
+                    print("ok")
+                
+                    if node.children[index] not in visited:
+
+                        visited.append(child)
+                        queue.append(child)
+                        
+                        if child.failure_link.word_node:
+                            print("A dictionnary link was created")
+                            child.dictionnary_link = child.failure_link
+
+                        elif child.failure_link and not child.failure_link.word_node:
+                            test = child.failure_link
+                            while test.failure_link and test != self.root:
+                                print(test)
+                                if test.failure_link.word_node:
+                                    print("Not a direct word_node was found")
+                                    child.dictionnary_link = test.failure_link
+                                    break
+                                else:
+                                    print("going further")
+                                    test = test.failure_link
+
+        return True
+
  
 # driver function
 def main():
  
     # Input keys (use only 'a' through 'z' and lower case)
     keys = ["the","a","there","anaswe","any",
-            "by","their", "that", "me", "zionyxay"]
+            "by","their", "than", "me", "anasuit"]
     output = ["Not present in trie",
               "Present in trie"]
  
@@ -174,6 +213,9 @@ def main():
 
     # Construct the failure links in the trie
     t.failure_links()
+
+     # Construct the dictionnary links in the trie
+    t.dictionnary_links()
  
     # Search for different keys
     print("{} ---- {}".format("anrlphabtheirmot",output[t.search("anrlphabtheirmot")]))
